@@ -1,4 +1,3 @@
-%%writefile dcnn.py
 """Dilated CNN: 2 x [Conv1d(dilated) -> ReLU -> AvgPool -> Dropout -> BatchNorm] -> Linear(5)."""
 import os
 import numpy as np
