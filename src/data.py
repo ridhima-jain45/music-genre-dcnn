@@ -1,4 +1,3 @@
-%%writefile data.py
 """Data loading: GTZAN (5 genres) -> MFCC arrays (20 x 1290) -> fixed stratified 80/20 split.
 
 Run once:  python src/data.py
