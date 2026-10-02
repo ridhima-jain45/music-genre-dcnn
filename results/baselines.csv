@@ -1,1 +1,9 @@
-
+features,mode,split,LR,GDA,RF,SVM,SVM (auto)
+raw (25800),paper,train,1.0,0.88,1.0,0.8325,1.0
+raw (25800),paper,test,0.7,0.81,0.79,0.77,0.32
+PCA-50,paper,train,0.995,0.8425,0.995,0.8675,1.0
+PCA-50,paper,test,0.68,0.74,0.75,0.79,0.21
+raw (25800),improved,train,1.0,0.88,1.0,0.9925,0.9925
+raw (25800),improved,test,0.82,0.81,0.79,0.81,0.81
+PCA-50,improved,train,1.0,0.865,0.9975,0.9225,1.0
+PCA-50,improved,test,0.84,0.81,0.77,0.84,0.25
