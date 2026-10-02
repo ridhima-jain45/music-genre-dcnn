@@ -1,4 +1,3 @@
-%%writefile baselines.py
 """Classical baselines (LR, GDA, RF, SVM) on raw flattened MFCCs and PCA-50.
 
 paper    : features used as-is (reproduction of the paper)
