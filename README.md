@@ -99,5 +99,4 @@ DCNN alone: _TODO_
 - Tzanetakis & Cook (2002). *Musical genre classification of audio signals.* IEEE TSAP 10(5).
 
 ## Author
-
-_Your name, roll number_
+Ridhima Jain, PES1UG24CS373
