@@ -1,4 +1,3 @@
-%%writefile extract_features.py
 """Use the trained DCNN as a feature extractor for the classical classifiers (paper Table V.3)."""
 import os
 import warnings
