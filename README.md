@@ -1,102 +1,381 @@
-# Music Genre Classification: Dilated CNN + Classical Algorithms
+# Music Genre Classification using CNN and Classical Algorithms
 
-Reproduction (and extension) of **"Combining CNN and Classical Algorithms for Music Genre
-Classification"** by Haojun Li, Siqi Xue and Jialun Zhang (Stanford, CS229).
+Reproduction and extension of the paper **"Combining CNN and Classical Algorithms for Music Genre Classification"** by Haojun Li, Siqi Xue and Jialun Zhang (Stanford CS229).
 
-**Idea:** train a small dilated CNN on MFCC features, then use its intermediate layer outputs as
-compact features for classical classifiers (Logistic Regression, GDA, Random Forest, SVM), and
-compare against the same classifiers on raw MFCCs.
+## 1. Project Overview
 
-## Dataset
+This project classifies music into five genres using MFCC audio features, classical machine learning models, and a small Dilated Convolutional Neural Network (DCNN).
 
-[GTZAN](http://marsyasweb.appspot.com/download/data_sets/) (Tzanetakis & Cook): 30-second clips.
-As in the paper, only 5 genres are used: **blues, classical, hiphop, metal, pop**
-(100 clips each, 500 total). Fixed stratified split: 400 train / 100 test (seed 42).
+The project has two clearly separated parts:
 
-The audio is **not included in this repo**. On Kaggle, attach the dataset
-*"GTZAN Dataset - Music Genre Classification"* (by andradaolteanu) to your notebook.
+1. **Original Paper Implementation** - reproduction of the reference methodology.
+2. **Our Research Extensions** - two experiments added beyond the original work:
+   - Five-fold stratified cross-validation
+   - Dilation ablation study
 
-## Repository structure
+The original implementation is preserved, and the new experiments are added on top of it.
 
+---
+
+## 2. Original Paper Implementation
+
+### Dataset
+
+The project uses the GTZAN dataset with five genres:
+
+- blues
+- classical
+- hiphop
+- metal
+- pop
+
+There are 100 clips per genre, giving 500 clips in total.
+
+The audio files are not included in this repository.
+
+### MFCC Features
+
+Each 30-second clip is converted to:
+
+- Sampling rate: 22050 Hz
+- MFCC coefficients: 20
+- Frames retained: 1290
+
+Each clip therefore contains:
+
+`20 x 1290 = 25,800` MFCC values.
+
+### Classical Models
+
+The original implementation evaluates:
+
+- Logistic Regression (LR)
+- Gaussian Discriminant Analysis (GDA)
+- Random Forest (RF)
+- Support Vector Machine (SVM)
+
+The models are evaluated on raw MFCC features and PCA-50 features.
+
+### Original Dilated CNN
+
+The original CNN contains two convolutional units:
+
+```text
+Unit 1: kernel 8, dilation 4, pooling 32
+Unit 2: kernel 4, dilation 2, pooling 16
 ```
+
+Intermediate feature sizes:
+
+```text
+Layer 1 = 320 features
+Layer 2 = 48 features
+```
+
+The CNN is also evaluated as a standalone classifier.
+
+### CNN as a Feature Extractor
+
+```text
+MFCC
+  |
+  v
+Dilated CNN
+  |
+  +--> Layer 1 (320) --> LR / GDA / RF / SVM
+  |
+  +--> Layer 2 (48)  --> LR / GDA / RF / SVM
+```
+
+---
+
+## 3. Original Paper/Reproduction Results
+
+The original implementation uses a fixed stratified 400/100 train-test split with seed 42.
+
+### Single-split test accuracy
+
+| Representation | LR | GDA | RF | SVM |
+|---|---:|---:|---:|---:|
+| Raw MFCC (25,800) | 0.70 | 0.81 | 0.79 | 0.77 |
+| PCA-50 | 0.68 | 0.74 | 0.75 | 0.79 |
+| Layer 1 (320) | 0.81 | 0.65 | 0.88 | 0.86 |
+| Layer 2 (48) | 0.86 | 0.89 | 0.86 | 0.89 |
+
+Standalone DCNN test accuracy: **0.85**
+
+These results are the baseline before our extensions.
+
+---
+
+## 4. Our Research Extensions
+
+The original evaluation depends on one 100-sample test split. We added two experiments beyond the original methodology.
+
+### Extension 1 - Five-Fold Stratified Cross-Validation
+
+#### Motivation
+
+With only 100 test clips, one prediction changes accuracy by one percentage point. Five-fold cross-validation evaluates all 500 clips across five different held-out test folds.
+
+We use:
+
+```python
+StratifiedKFold(
+    n_splits=5,
+    shuffle=True,
+    random_state=42
+)
+```
+
+Each fold contains 400 training clips and 100 test clips. Every clip is used as a test sample exactly once.
+
+#### Leakage Prevention
+
+For every fold:
+
+1. A fresh CNN is trained from scratch.
+2. CNN MFCC normalization uses training-fold statistics only.
+3. CNN epoch selection uses a validation split from the training fold.
+4. The held-out test fold is never used for model selection.
+5. Layer 1 and Layer 2 features come from that fold's trained CNN.
+6. Classical-model standardization uses training-fold features only.
+7. The existing `dcnn.pt` checkpoint is not reused for CV.
+
+#### Five-Fold Results
+
+Results are reported as mean test accuracy +/- standard deviation.
+
+| Representation | Algorithm | Mean +/- Std |
+|---|---|---:|
+| Raw MFCC | LR | 0.814 +/- 0.032 |
+| Raw MFCC | GDA | 0.800 +/- 0.043 |
+| Raw MFCC | RF | 0.790 +/- 0.037 |
+| Raw MFCC | SVM | 0.824 +/- 0.037 |
+| DCNN | DCNN | 0.846 +/- 0.050 |
+| Layer 1 | LR | 0.850 +/- 0.032 |
+| Layer 1 | GDA | 0.584 +/- 0.040 |
+| Layer 1 | RF | 0.840 +/- 0.037 |
+| Layer 1 | SVM | 0.856 +/- 0.031 |
+| Layer 2 | LR | 0.868 +/- 0.029 |
+| Layer 2 | GDA | 0.840 +/- 0.054 |
+| Layer 2 | RF | 0.870 +/- 0.033 |
+| Layer 2 | SVM | 0.866 +/- 0.025 |
+
+Output files:
+
+```text
+results/cv_folds.csv
+results/cv_summary.csv
+```
+
+### Extension 2 - Dilation Ablation Study
+
+#### Research Question
+
+The original CNN uses dilated convolutions. We added an ablation experiment to investigate whether dilation contributes to performance.
+
+The two configurations are:
+
+```text
+Original dilated CNN: dilation = (4, 2)
+No-dilation CNN:      dilation = (1, 1)
+```
+
+All other CNN architecture settings remain unchanged.
+
+#### Configurable CNN
+
+The original configuration is:
+
+```python
+DCNN()
+```
+
+which uses dilation `(4, 2)`.
+
+The ablation configuration is:
+
+```python
+DCNN(dil1=1, dil2=1)
+```
+
+Both configurations continue to produce:
+
+```text
+Layer 1 = 320 features
+Layer 2 = 48 features
+```
+
+#### Dilation Ablation Results
+
+| Representation | Algorithm | Dilated (4,2) | No Dilation (1,1) |
+|---|---|---:|---:|
+| DCNN | DCNN | 0.846 +/- 0.050 | 0.830 +/- 0.035 |
+| Layer 1 | LR | 0.850 +/- 0.032 | 0.836 +/- 0.037 |
+| Layer 1 | GDA | 0.584 +/- 0.040 | 0.592 +/- 0.054 |
+| Layer 1 | RF | 0.840 +/- 0.037 | 0.846 +/- 0.046 |
+| Layer 1 | SVM | 0.856 +/- 0.031 | 0.848 +/- 0.015 |
+| Layer 2 | LR | 0.868 +/- 0.029 | 0.866 +/- 0.029 |
+| Layer 2 | GDA | 0.840 +/- 0.054 | 0.850 +/- 0.036 |
+| Layer 2 | RF | 0.870 +/- 0.033 | 0.866 +/- 0.027 |
+| Layer 2 | SVM | 0.866 +/- 0.025 | 0.854 +/- 0.021 |
+
+The paired comparison across 45 fold/method combinations produced:
+
+```text
+Mean paired difference (Dilated - No Dilation) = 0.0036
+```
+
+The paired differences vary across methods and folds, so the experiment does not provide clear evidence of a consistent performance advantage from dilation at this experimental scale.
+
+Output files:
+
+```text
+results/cv_nodilation_folds.csv
+results/cv_nodilation_summary.csv
+results/dilation_comparison.csv
+```
+
+---
+
+## 5. Final Project Workflow
+
+```text
+REFERENCE PAPER
+      |
+      v
+ORIGINAL PAPER IMPLEMENTATION
+      |
+      +-- MFCC features
+      +-- Raw MFCC + Classical ML
+      +-- PCA-50 + Classical ML
+      +-- Dilated CNN
+             |
+             +-- CNN alone
+             +-- Layer 1 + Classical ML
+             +-- Layer 2 + Classical ML
+      |
+      v
+OUR RESEARCH EXTENSIONS
+      |
+      +-- Extension 1: Five-Fold Cross-Validation
+      |
+      +-- Extension 2: Dilation Ablation
+```
+
+---
+
+## 6. How to Run
+
+### Windows dataset configuration
+
+Replace the example paths with the actual dataset, cache, and results locations:
+
+```cmd
+set GTZAN_DIR=D:\path\to\genres_original
+set CACHE_DIR=D:\path\to\cache
+set RESULTS_DIR=D:\path\to\results
+```
+
+The dataset directory must contain:
+
+```text
+blues/
+classical/
+hiphop/
+metal/
+pop/
+```
+
+### Original Paper Implementation
+
+Build the MFCC cache:
+
+```cmd
+python src\data.py
+```
+
+Run the classical baselines:
+
+```cmd
+python src\baselines.py
+```
+
+Train the original dilated CNN:
+
+```cmd
+python src\dccn.py
+```
+
+Extract CNN features and evaluate classical classifiers:
+
+```cmd
+python src\extract_features.py
+```
+
+### Our Extension 1 - Five-Fold Cross-Validation
+
+```cmd
+python src\cv.py --folds 5 --epochs 100 --output results\cv_folds.csv
+```
+
+### Our Extension 2 - No-Dilation Ablation
+
+```cmd
+python src\cv.py --folds 5 --epochs 100 --dil1 1 --dil2 1 --skip-raw --output results\cv_nodilation_folds.csv
+```
+
+---
+
+## 7. Repository Structure
+
+```text
 .
 ├── README.md
 ├── requirements.txt
 ├── src/
-│   ├── data.py              # MFCC extraction (20 x 1290 per clip), caching, fixed train/test split
-│   ├── baselines.py         # LR / GDA / RF / SVM on raw and PCA-50 features
-│   ├── dcnn.py              # dilated CNN definition + training (validation-based epoch selection)
-│   ├── extract_features.py  # CNN layer 1 / layer 2 features -> classical classifiers
-│   └── cv.py                # 5-fold cross-validation + GDA shrinkage   (TODO: results)
-├── results/                 # CSV tables, figures, saved model weights
-└── report/                  # 2-page write-up (PDF)
+│   ├── data.py
+│   ├── baselines.py
+│   ├── dccn.py
+│   ├── extract_features.py
+│   └── cv.py
+└── results/
+    ├── baselines.csv
+    ├── cnn_features.csv
+    ├── dcnn.pt
+    ├── dcnn_confusion.npy
+    ├── cv_folds.csv
+    ├── cv_summary.csv
+    ├── cv_nodilation_folds.csv
+    ├── cv_nodilation_summary.csv
+    └── dilation_comparison.csv
 ```
 
-## Setup and how to run
+---
 
-### On Kaggle (what we used)
+## 8. Reproducibility and Limitations
 
-1. Create a notebook and attach the GTZAN dataset (*Add Input*).
-2. Clone this repo (or upload the `src/` folder), then run from inside `src/`:
+- Five-fold CV uses stratified folds with `random_state=42`.
+- A fresh CNN is trained independently inside each fold.
+- Test-fold data is not used for normalization, feature fitting, epoch selection, or model selection.
+- The dilated and no-dilation CNNs use the same fold assignments and corresponding fold seeds.
+- The primary dilation ablation uses one seed per fold.
+- Five-fold cross-validation reduces dependence on one split but does not by itself establish statistical significance.
+- Conclusions apply to this dataset and experimental setup.
 
-```python
-!git clone <repo-url>
-%cd <repo-name>/src
-!python data.py              # extract MFCCs, cache them, print dataset summary (~1-3 min)
-!python baselines.py         # classical baselines on raw / PCA features
-!python dcnn.py              # train the dilated CNN, save weights to results/
-!python extract_features.py  # classical classifiers on CNN features (needs dcnn.py first)
-!python cv.py                # 5-fold cross-validation (slowest, ~5-15 min on CPU)
-```
+---
 
-Default paths point to the Kaggle input and `/kaggle/working`.
+## 9. Reference
 
-### Locally
+Haojun Li, Siqi Xue and Jialun Zhang.
 
-```bash
-pip install -r requirements.txt
-export GTZAN_DIR=/path/to/genres_original   # folder containing blues/, classical/, ...
-export CACHE_DIR=./cache
-export RESULTS_DIR=./results
-cd src && python data.py && python baselines.py && python dcnn.py && python extract_features.py
-```
+**Combining CNN and Classical Algorithms for Music Genre Classification.**
 
-Run order matters: `data.py` builds the cache first, and `dcnn.py` must run before
-`extract_features.py` because it saves the trained weights.
+Stanford CS229.
 
-## Method summary
+Original code:
+https://github.com/LithiumH/CS229-Music-Classification
 
-1. **Preprocessing:** `librosa` MFCCs, 20 coefficients x 1290 frames (25,800 features per clip).
-2. **Baselines:** LR, GDA (LDA, shared covariance), RF (max depth 7), RBF-SVM on raw and PCA-50 features.
-3. **Dilated CNN:** 2 x [dilated Conv1d -> ReLU -> AvgPool -> Dropout -> BatchNorm] -> Linear(5).
-   Layer 1 output = 320 features, layer 2 output = 48 features. Adam, lr 1e-3, cross-entropy.
-4. **CNN as feature extractor:** flatten layer 1 / layer 2 activations and train the four classical models on them.
-
-## Results
-
-> TODO: fill in from `results/*.csv` once all experiments are final.
-
-| Test accuracy | LR | GDA | RF | SVM |
-|---|---|---|---|---|
-| Raw MFCC (25800) | | | | |
-| DCNN layer 1 (320) | | | | |
-| DCNN layer 2 (48) | | | | |
-
-DCNN alone: _TODO_
-
-## Our changes relative to the paper
-
-- Best CNN epoch chosen on a held-out **validation** split (the paper tuned on the test set).
-- Features standardised using **training statistics only** (no test leakage).
-- SVM baseline: the paper's very low SVM accuracy is reproduced only with `gamma="auto"` on unscaled
-  features; with `gamma="scale"` the same SVM reaches ~0.77 on raw MFCCs.
-- _TODO: add cross-validation, GDA shrinkage, and any further improvements here._
-
-## Reference
-
-- Li, Xue, Zhang. *Combining CNN and Classical Algorithms for Music Genre Classification.* Stanford CS229.
-  Original code: https://github.com/LithiumH/CS229-Music-Classification
-- Tzanetakis & Cook (2002). *Musical genre classification of audio signals.* IEEE TSAP 10(5).
-
-## Author
-Ridhima Jain, PES1UG24CS373
+GTZAN:
+http://marsyasweb.appspot.com/download/data_sets/
