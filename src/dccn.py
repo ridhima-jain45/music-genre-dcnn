@@ -25,12 +25,12 @@ class Unit(nn.Module):
 
 
 class DCNN(nn.Module):
-    def __init__(self, n_classes=5, n_mfcc=20, n_frames=1290):
+    def __init__(self, n_classes=5, n_mfcc=20, n_frames=1290, dil1=4, dil2=2):
         super().__init__()
-        # unit 1: 8 filters, kernel 8, dilation 4, pool 32 -> 8 * 40 = 320 features
-        self.unit1 = Unit(n_mfcc, 8, 8, 4, 32)
-        # unit 2: 24 filters, kernel 4, dilation 2, pool 16 -> 24 * 2 = 48 features
-        self.unit2 = Unit(8, 24, 4, 2, 16)
+        # unit 1: 8 filters, kernel 8, configurable dilation, pool 32 -> 320 features
+        self.unit1 = Unit(n_mfcc, 8, 8, dil1, 32)
+        # unit 2: 24 filters, kernel 4, configurable dilation, pool 16 -> 48 features
+        self.unit2 = Unit(8, 24, 4, dil2, 16)
         with torch.no_grad():
             self.eval()
             flat = self.unit2(self.unit1(torch.zeros(2, n_mfcc, n_frames))).flatten(1).shape[1]
