@@ -12,7 +12,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from data import build_dataset, GENRES, SEED
 from baselines import run_classifiers
-from dccn import DCNN, train, accuracy, DEVICE
+from dcnn import DCNN, train, accuracy, DEVICE
 
 
 CLASSICAL_ALGORITHMS = ["LR", "GDA", "RF", "SVM"]

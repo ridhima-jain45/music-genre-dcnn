@@ -7,7 +7,7 @@ import torch
 from sklearn.exceptions import ConvergenceWarning
 
 from data import load_split
-from dccn import DCNN, DEVICE
+from dcnn import DCNN, DEVICE
 from baselines import run_classifiers, to_rows, fmt
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
