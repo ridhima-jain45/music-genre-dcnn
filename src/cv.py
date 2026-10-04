@@ -426,12 +426,9 @@ def main():
     # results/cv_folds.csv
     # ->
     # results/cv_summary.csv
-    summary_output = os.path.splitext(args.output)[0]
-    summary_output = (
-        summary_output.replace("_folds", "_summary")
-        + ".csv"
-    )
-
+    summary_output = args.output.replace("_folds", "_summary")
+    if summary_output == args.output:
+        summary_output = os.path.splitext(args.output)[0] + "_summary.csv"
     summary.to_csv(
         summary_output,
         index=False,
