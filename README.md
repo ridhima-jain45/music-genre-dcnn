@@ -40,7 +40,7 @@ The audio is **not included in this repo**. On Kaggle, attach the dataset
 │   ├── segments.py          # 3-second segment model with clip-level voting (5-fold CV)
 │   └── predict.py           # demo: audio file -> predicted genre
 ├── results/                 # CSV tables, confusion matrix, saved model weights
-└── report/                  # 2-page write-up (PDF)
+└── report                  # 2-page write-up (PDF)
 ```
 
 ## Setup and how to run
